@@ -10,16 +10,6 @@ from functools import reduce
 from sklearn.linear_model import LinearRegression
 import json
 
-def cluster_dbscan(data, distance = 0.5, min_samples = 5):
-    dbscan = DBSCAN(eps=0.5, min_samples=5)
-
-    for index in range(len(data.columns)):
-        X = np.array(data.iloc[index]).reshape(-1, 1)
-        kamal = dbscan.fit_predict(X)
-        print('kamal', kamal)
-
-    return
-
 def get_data(excel_data_file_path):
     excel_data = pd.read_excel(excel_data_file_path)
 
@@ -112,6 +102,37 @@ def get_educated_regression(data, degree=3, include_bias=True):
 
     return model, poly_features
 
+def get_forecast(data, degree=3, include_bias=True):
+    poly_features = PolynomialFeatures(degree=degree, include_bias=include_bias)
+    result = {}
+
+    years = sorted(list(data.keys()));
+    regions = list(data[years[0]].keys());
+
+    model_A = LinearRegression();
+    model_B = LinearRegression();
+
+    for region in regions:
+        X = poly_features.fit_transform(list(map(lambda v: [v], years)));
+        y_A = list(map(lambda v: data[v][region][0], years));
+        y_B = list(map(lambda v: data[v][region][1], years));
+    
+        model_A.fit(X, y_A)
+        model_B.fit(X, y_B)
+
+    years_predict = years + list(range(years[-1] + 1, 2027)) 
+    years_predict = list(map(lambda v: [v], years_predict))
+   
+    X_predict = poly_features.fit_transform(years_predict)
+    y_A_predict = model_A.predict(X_predict)
+    y_B_predict = model_B.predict(X_predict)
+
+    result['A'] = list(map(lambda year, v: [int(year[0]), int(v)], years_predict, y_A_predict))
+    result['B'] = list(map(lambda year, v: [int(year[0]), int(v)], years_predict, y_B_predict))
+
+    return result
+
+
 def get_result(
     clusters_data,
     some_range,
@@ -123,6 +144,8 @@ def get_result(
     for cluster_id in sorted(clusters_data.keys()):
         current_cluster = clusters_data[cluster_id]
         years = sorted(current_cluster.keys())
+
+        forecast = get_forecast(current_cluster, degree=degree)
 
         model, poly_features = get_educated_regression(current_cluster, degree=degree)
         X_poly = poly_features.fit_transform(X)
@@ -139,12 +162,11 @@ def get_result(
 
             data.append({ "year": int(year), "regions": regions })
 
-        
-
         result.append({
             "id": int(cluster_id),
             "data": data,
-            "regression": regression
+            "regression": regression,
+            "forecast": forecast,
         })
     
     return result
@@ -173,20 +195,33 @@ clusters_data = separate_data_by_clusters(data, clusters)
 for cluster_id in clusters_data.keys():
     print('cluster_id', cluster_id)
 
-selected_cluster = clusters_data[0]
-
-model, poly_features = get_educated_regression(selected_cluster, degree=3)
-
 result = get_result(clusters_data, range(0, 100000, 10000))
 save_to_json(result, 'output/bezrab__zp.json')
 
-# X = [[10000], [20000], [30000], [40000], [50000], [60000], [70000], [80000], [90000], [100000]]
+
+
+
+
+
+
+#----------------------------------------------------------------------------------------------
+
+# selected_cluster = clusters_data[0]
+
+# years = list(selected_cluster.keys());
+
+# X = [[2020], [2021], [2022], [2023], [2024], [2025], [2026]]
+
+# model, poly_features = get_educated_regression(selected_cluster, degree=3)
+
+# X = list(map(lambda v: [v], range(0, 100000, 10000)))  
 
 # X_poly = poly_features.fit_transform(X)
 # y_pred = model.predict(X_poly)
 
 # # Вывод линии
 # plt.scatter(X, y_pred)
+# plt.scatter(X[:3], y)
 # plt.plot(X, y_pred, color='darkorange', label='Polynomial Regression', marker='o')
 # plt.xlabel('Количество безработных')
 # plt.ylabel('Заработная плата')
