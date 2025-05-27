@@ -90,7 +90,9 @@ const formatSize = bytes => {
 
         <template #empty>
             <div class="nodata">
-                <IconCloud class="cloud" />
+                <slot name="icon">
+                    <IconCloud class="cloud" />
+                </slot>
 
                 <div class="label">Перенесите сюда файл c характеристиками регионов</div>
             </div>

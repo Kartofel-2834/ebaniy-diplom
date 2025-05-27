@@ -21,12 +21,20 @@ function onSubmit() {
         <DataUploader
             class="uploader"
             @change="firstFile = $event"
-        />
+        >
+            <template #icon>
+                <span class="text">A</span>
+            </template>
+        </DataUploader>
 
         <DataUploader
             class="uploader"
             @change="secondFile = $event"
-        />
+        >
+            <template #icon>
+                <span class="text">B</span> 
+            </template>
+        </DataUploader>
 
         <Button
             class="submit"
@@ -35,7 +43,7 @@ function onSubmit() {
             size="large"
             @click="onSubmit"
         >
-            Начать кластерный анализ
+            Начать анализ
         </Button>
     </div>
 </template>
@@ -62,5 +70,11 @@ function onSubmit() {
     grid-column: 1 / 3;
     height: 5.6rem;
     font-weight: 500;
+}
+
+
+.text {
+    font-size: 6rem;
+    font-weight: 600;
 }
 </style>

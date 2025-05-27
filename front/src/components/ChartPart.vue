@@ -1,5 +1,8 @@
 <script setup>
-import DATA from '@/data/bezrab__zp.json';
+import BEZRAB_ZP from '@/data/bezrab__zp.json';
+import INVEST_VRP from '@/data/invest__vrp.json';
+import ZANYAT_VRP from '@/data/zanyat__vrp.json';
+import OSN_FOND_VRP from '@/data/osn-fond__vrp.json';
 
 import {
     Accordion,
@@ -12,11 +15,15 @@ import {
 import { computed, ref } from 'vue';
 import IconRegression from './icons/IconRegression.vue';
 import IconCluster from './icons/IconCluster.vue';
-import { useClusterData, useRegressionData } from '@/composables/data';
+import { useClusterData, useForecastData, useRegressionData } from '@/composables/data';
 import UiChart from './ui/UiChart.vue';
+import IconMadeInHeaven from './icons/IconMadeInHeaven.vue';
+
+const DATA = ZANYAT_VRP
 
 const mode = ref('cluster');
 const selectedCluster = ref(null);
+const selectedCharacteristic = ref('A');
 
 const clusters = computed(() => {
     const clusters = DATA.map((cluster, index) => {
@@ -64,21 +71,71 @@ const regressionChartData = computed(() => {
     result.datasets = result.datasets.map(dataset => {
         return {
             ...dataset,
-            hidden: selectedCluster.value !== null && dataset.id !== selectedCluster.value,
+            hidden: checkIsDatasetHidden(dataset),
         };
     });
 
     return result;
 });
 
+const forecastChartData = computed(() => {
+    const { A, B } = useForecastData(DATA, () => ({
+        tension: 0.4,
+        fill: false,
+    }));
+
+    A.datasets = A.datasets.map(dataset => {
+        return {
+            ...dataset,
+            hidden: checkIsDatasetHidden(dataset),
+        };
+    });
+
+    B.datasets = B.datasets.map(dataset => {
+        return {
+            ...dataset,
+            hidden: checkIsDatasetHidden(dataset),
+        };
+    });
+
+    return selectedCharacteristic.value === 'A' ? A : B;
+});
+
 function onClusterSelect(event) {
     selectedCluster.value = event;
+}
+
+function checkIsDatasetHidden(dataset) {
+    return selectedCluster.value !== null && dataset.id !== selectedCluster.value;
 }
 </script>
 
 <template>
     <div class="chart-part">
         <div class="bar">
+            <ButtonGroup class="characteristics">
+                <Button
+                    class="characteristic-button"
+                    size="large"
+                    :disabled="mode !== 'forecast'"
+                    :style="{ pointerEvents: selectedCharacteristic === 'A' ? 'none' : 'auto' }"
+                    :severity="selectedCharacteristic === 'A' ? 'success' : 'secondary'"
+                    @click="selectedCharacteristic = 'A'"
+                >
+                    A
+                </Button>
+                <Button
+                    class="characteristic-button"
+                    size="large"
+                    :disabled="mode !== 'forecast'"
+                    :style="{ pointerEvents: selectedCharacteristic === 'B' ? 'none' : 'auto' }"
+                    :severity="selectedCharacteristic === 'B' ? 'success' : 'secondary'"
+                    @click="selectedCharacteristic = 'B'"
+                >
+                    B
+                </Button>
+            </ButtonGroup>
+
             <Button
                 class="select-all"
                 size="large"
@@ -112,7 +169,7 @@ function onClusterSelect(event) {
                                 class="region"
                             >
                                 {{ region.label }}
-                                <span class="region-data">({{ region.data.join() }})</span>
+                                <span class="region-data">({{ region.data.join(';') }})</span>
                             </div>
                         </AccordionContent>
                     </AccordionPanel>
@@ -143,6 +200,17 @@ function onClusterSelect(event) {
 
                     Регрессия
                 </Button>
+
+                <Button
+                    class="control-button"
+                    :style="{ pointerEvents: mode === 'forecast' ? 'none' : 'auto' }"
+                    :severity="mode === 'forecast' ? 'success' : 'secondary'"
+                    @click="mode = 'forecast'"
+                >
+                    <IconMadeInHeaven class="control-button-icon forecast-icon" />
+
+                    Прогнозирование
+                </Button>
             </ButtonGroup>
 
             <div class="canvas-wrapper">
@@ -160,6 +228,15 @@ function onClusterSelect(event) {
                         v-show="mode === 'regression'"
                         class="canvas"
                         :data-list="regressionChartData"
+                        type="line"
+                    />
+                </Transition>
+
+                <Transition name="fade">
+                    <UiChart
+                        v-show="mode === 'forecast'"
+                        class="canvas"
+                        :data-list="forecastChartData"
                         type="line"
                     />
                 </Transition>
@@ -234,6 +311,10 @@ function onClusterSelect(event) {
     height: auto;
 }
 
+.forecast-icon {
+    width: 1.4em;
+}
+
 .region {
     margin: 2rem 0;
     pointer-events: none;
@@ -246,6 +327,18 @@ function onClusterSelect(event) {
 .region-data {
     font-size: 0.8em;
     color: var(--p-text-muted-color);
+}
+
+.characteristics {
+    display: grid;
+    grid-auto-flow: column;
+    width: calc(100% - 2rem);
+    margin: 1rem;
+}
+
+.characteristic-button {
+    font-size: 1.6rem;
+    font-weight: 600;
 }
 </style>
 

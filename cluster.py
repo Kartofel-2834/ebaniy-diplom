@@ -9,6 +9,15 @@ from sklearn.model_selection import train_test_split
 from functools import reduce
 from sklearn.linear_model import LinearRegression
 import json
+import copy
+
+def print_line_model_equatation(model):
+    coefficients = list(map(str, filter(lambda v: v != 0, model.coef_[0])));
+    coefficients = map(lambda v, i: f'({v} * x^{str(i)})', coefficients, range(1, len(coefficients) + 1))
+    
+    right_size = ' + '.join([str(model.intercept_[0])] + list(coefficients))
+
+    print(f'y = {right_size}')
 
 def get_data(excel_data_file_path):
     excel_data = pd.read_excel(excel_data_file_path)
@@ -41,28 +50,28 @@ def get_educated_dbscan(
 
     dbscan = DBSCAN(eps=eps, min_samples=min_samples)
     data = {};
+    learning_data = {};
 
     # Обучение модели DBSCAN на данных всех лет
     for year in same_years:
-        learning_a = [];
-        learning_b = [];
-        learning_data = {};
+        learning_year_data = {};
+        year_data = {};
 
         for region in same_regions:
-            A = a_data.loc[a_data['REGION'] == region, year].values[0]
-            B = b_data.loc[b_data['REGION'] == region, year].values[0]
+            A_clean = a_data.loc[a_data['REGION'] == region, year].values[0]
+            B_clean = b_data.loc[b_data['REGION'] == region, year].values[0]
             
-            A = first_formatter(A)
-            B = second_formatter(B)
+            A = first_formatter(a_data.loc[a_data['REGION'] == region, year].values[0])
+            B = second_formatter(b_data.loc[b_data['REGION'] == region, year].values[0])
 
-            learning_a.append(A)
-            learning_b.append(B)
-            learning_data[region] = [A, B]
+            year_data[region] = [A_clean, B_clean]
+            learning_year_data[region] = [A, B]
 
-        data[year] = learning_data
-        dbscan.fit(list(learning_data.values()))
+        data[year] = year_data
+        learning_data[year] = learning_year_data
+        dbscan.fit(list(learning_year_data.values()))
 
-    return dbscan, data
+    return dbscan, data, learning_data    
 
 def separate_data_by_clusters(data, clusters):
     result = {}
@@ -99,7 +108,7 @@ def get_educated_regression(data, degree=3, include_bias=True):
 
     model = LinearRegression()
     model.fit(X, y)
-
+    
     return model, poly_features
 
 def get_forecast(data, degree=3, include_bias=True):
@@ -132,7 +141,6 @@ def get_forecast(data, degree=3, include_bias=True):
 
     return result
 
-
 def get_result(
     clusters_data,
     some_range,
@@ -162,6 +170,9 @@ def get_result(
 
             data.append({ "year": int(year), "regions": regions })
 
+        print(f'\nУравнение регрессии A от Б для кластера {cluster_id}')
+        print_line_model_equatation(model)
+
         result.append({
             "id": int(cluster_id),
             "data": data,
@@ -179,24 +190,52 @@ def save_to_json(some_dict, file_path):
 
 #----------------------------------------------------------------------------------------------
 
-dbscan, data = get_educated_dbscan(
-    'data/bezrab.xlsx',
-    'data/zp.xlsx',
-    eps=5000,
-    first_formatter=lambda v: v * 1000
+## ВРП от Инвестиций
+# regression_range = range(0, 100000, 10000)
+# dbscan, data, learning_data = get_educated_dbscan(
+#     'data/Инвестиции в основной капитал.xlsx',
+#     'data/ВРП.xlsx',
+#     eps=100000,
+#     min_samples=5,
+#     first_formatter=lambda v: v,
+#     second_formatter=lambda v: v / 10
+# )
+
+# # ВРП от Среднегодовой численности занятых
+regression_range = range(0, 3000, 300)
+dbscan, data, learning_data = get_educated_dbscan(
+    'data/Среднегодовая численность занятых.xlsx',
+    'data/ВРП.xlsx',
+    eps=100000,
+    min_samples=5,
+    first_formatter=lambda v: v * 2000,
+    second_formatter=lambda v: v / 2.5
 )
+
+# # ВРП от Стоимости основных фондов
+# regression_range = range(0, 1000000, 100000)
+# dbscan, data, learning_data = get_educated_dbscan(
+#     'data/Стоимость основных фондов.xlsx',
+#     'data/ВРП.xlsx',
+#     eps=360000,
+#     min_samples=4,
+#     first_formatter=lambda v: v / 1.7,
+#     second_formatter=lambda v: v / 1.75
+# )
+
 
 newest_year = max(data.keys())
 newest_data = list(data[newest_year].values())
+newest_learning_data = list(learning_data[newest_year].values())
 
-clusters = dbscan.fit_predict(newest_data)
+clusters = dbscan.fit_predict(newest_learning_data)
 clusters_data = separate_data_by_clusters(data, clusters)
 
 for cluster_id in clusters_data.keys():
     print('cluster_id', cluster_id)
 
-result = get_result(clusters_data, range(0, 100000, 10000))
-save_to_json(result, 'output/bezrab__zp.json')
+result = get_result(clusters_data, regression_range)
+save_to_json(result, 'output/zanyat__vrp.json')
 
 
 
@@ -229,16 +268,16 @@ save_to_json(result, 'output/bezrab__zp.json')
 # plt.show()
 
 # # Вывод кластеров
-# plt.scatter(
-#     list(map(lambda v: v[0], newest_data)), # x 
-#     list(map(lambda v: v[1], newest_data)), # y
-#     c=clusters,
-#     cmap='rainbow'
-# )
-# plt.title('Кластеры DBSCAN')
-# plt.xlabel('Первая характеристика')
-# plt.ylabel('Вторая характеристика')
-# plt.show()
+plt.scatter(
+    list(map(lambda v: v[0], newest_learning_data)), # x 
+    list(map(lambda v: v[1], newest_learning_data)), # y
+    c=clusters,
+    cmap='rainbow'
+)
+plt.title('Кластеры DBSCAN')
+plt.xlabel('Первая характеристика')
+plt.ylabel('Вторая характеристика')
+plt.show()
 
 # Сохраняем результат в файл
 # save_to_json(selected_cluster, 'output/bezrab__zp.json')

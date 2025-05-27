@@ -6,7 +6,7 @@ import { ref } from 'vue';
 import UploadPart from '@/components/UploadPart.vue';
 import ChartPart from '@/components/ChartPart.vue';
 
-const mode = ref('upload');
+const mode = ref('chart');
 </script>
 
 <template>

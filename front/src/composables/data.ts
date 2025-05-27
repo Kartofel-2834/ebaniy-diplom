@@ -41,3 +41,37 @@ export function useRegressionData(
 
     return { labels, datasets };
 }
+
+export function useForecastData(
+    dataList: IClusterData[],
+    formatter: (v?: IClusterData) => object = () => ({}),
+) {
+    const labelsA = dataList[0].forecast.A.map(([year]) => year);
+    const datasetsA = dataList.map(clusterData => {
+        const forecast = clusterData.forecast.A;
+
+        return {
+            id: clusterData.id,
+            label: clusterData.id >= 0 ? `Кластер ${clusterData.id + 1}` : 'Выбросы',
+            data: forecast.map(([x, y]) => y),
+            ...formatter(clusterData),
+        };
+    });
+
+    const labelsB = dataList[0].forecast.B.map(([year]) => year);
+    const datasetsB = dataList.map(clusterData => {
+        const forecast = clusterData.forecast.B;
+
+        return {
+            id: clusterData.id,
+            label: clusterData.id >= 0 ? `Кластер ${clusterData.id + 1}` : 'Выбросы',
+            data: forecast.map(([x, y]) => y),
+            ...formatter(clusterData),
+        };
+    });
+
+    return {
+        A: { labels: labelsA, datasets: datasetsA },
+        B: { labels: labelsB, datasets: datasetsB },
+    };
+}
