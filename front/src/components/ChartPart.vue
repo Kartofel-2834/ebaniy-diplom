@@ -19,7 +19,7 @@ import { useClusterData, useForecastData, useRegressionData } from '@/composable
 import UiChart from './ui/UiChart.vue';
 import IconMadeInHeaven from './icons/IconMadeInHeaven.vue';
 
-const DATA = ZANYAT_VRP
+const DATA = OSN_FOND_VRP
 
 const mode = ref('cluster');
 const selectedCluster = ref(null);

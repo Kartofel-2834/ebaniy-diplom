@@ -19,6 +19,43 @@ def print_line_model_equatation(model):
 
     print(f'y = {right_size}')
 
+def print_forecast(result_data):
+    years = set();
+    rows_A = [];
+    rows_B = [];
+
+    for cluster in result_data:
+        row_A = ['Выбросы' if cluster['id'] == -1 else f'Кластер {cluster['id'] + 1}'];
+        row_B = ['Выбросы' if cluster['id'] == -1 else f'Кластер {cluster['id'] + 1}'];
+
+        for point in cluster['forecast']['A']:
+            years.add(str(point[0]))
+            row_A.append(str(point[1]))
+
+        for point in cluster['forecast']['B']:
+            row_B.append(str(point[1]))
+
+        rows_A.append(row_A)
+        rows_B.append(row_B)
+    
+    print('\n\nПрогнозная таблица для характеристики А')
+    print(';'.join(['Кластеры'] + sorted(years))) 
+    print('\n'.join(map(lambda row: ';'.join(row), rows_A))) 
+
+    print('\n\nПрогнозная таблица для характеристики B')
+    print(';'.join(['Кластеры'] + sorted(years))) 
+    print('\n'.join(map(lambda row: ';'.join(row), rows_B))) 
+
+def print_regions(result_data):
+    for cluster in result_data:
+        cluster_name = 'Выбросы' if cluster['id'] == -1 else f'Кластер {cluster["id"] + 1}'
+        print(f'\n\nРегионы - {cluster_name}')
+
+        regions = cluster['data'][0]['regions'].keys();
+
+        print(', '.join(sorted(regions)))
+
+
 def get_data(excel_data_file_path):
     excel_data = pd.read_excel(excel_data_file_path)
 
@@ -202,26 +239,26 @@ def save_to_json(some_dict, file_path):
 # )
 
 # # ВРП от Среднегодовой численности занятых
-regression_range = range(0, 3000, 300)
-dbscan, data, learning_data = get_educated_dbscan(
-    'data/Среднегодовая численность занятых.xlsx',
-    'data/ВРП.xlsx',
-    eps=100000,
-    min_samples=5,
-    first_formatter=lambda v: v * 2000,
-    second_formatter=lambda v: v / 2.5
-)
+# regression_range = range(0, 3000, 300)
+# dbscan, data, learning_data = get_educated_dbscan(
+#     'data/Среднегодовая численность занятых.xlsx',
+#     'data/ВРП.xlsx',
+#     eps=100000,
+#     min_samples=5,
+#     first_formatter=lambda v: v * 2000,
+#     second_formatter=lambda v: v / 2.5
+# )
 
 # # ВРП от Стоимости основных фондов
-# regression_range = range(0, 1000000, 100000)
-# dbscan, data, learning_data = get_educated_dbscan(
-#     'data/Стоимость основных фондов.xlsx',
-#     'data/ВРП.xlsx',
-#     eps=360000,
-#     min_samples=4,
-#     first_formatter=lambda v: v / 1.7,
-#     second_formatter=lambda v: v / 1.75
-# )
+regression_range = range(0, 1000000, 100000)
+dbscan, data, learning_data = get_educated_dbscan(
+    'data/Стоимость основных фондов.xlsx',
+    'data/ВРП.xlsx',
+    eps=360000,
+    min_samples=4,
+    first_formatter=lambda v: v / 1.7,
+    second_formatter=lambda v: v / 1.75
+)
 
 
 newest_year = max(data.keys())
@@ -235,14 +272,10 @@ for cluster_id in clusters_data.keys():
     print('cluster_id', cluster_id)
 
 result = get_result(clusters_data, regression_range)
-save_to_json(result, 'output/zanyat__vrp.json')
+save_to_json(result, 'output/invest__vrp.json')
 
-
-
-
-
-
-
+print_forecast(result)
+print_regions(result)
 #----------------------------------------------------------------------------------------------
 
 # selected_cluster = clusters_data[0]

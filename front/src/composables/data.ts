@@ -39,7 +39,12 @@ export function useRegressionData(
         };
     });
 
-    return { labels, datasets };
+    // const datasets2 = datasets.map(dataset => ({
+    //     ...dataset,
+    //     data: dataset.data.map(v => v - 40000),
+    // }));
+
+    return { labels, datasets: datasets };
 }
 
 export function useForecastData(

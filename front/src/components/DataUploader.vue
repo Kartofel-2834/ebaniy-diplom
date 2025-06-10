@@ -94,7 +94,7 @@ const formatSize = bytes => {
                     <IconCloud class="cloud" />
                 </slot>
 
-                <div class="label">Перенесите сюда файл c характеристиками регионов</div>
+                <div class="label">Перенесите сюда файл c социально-экономическими показателями регионов</div>
             </div>
         </template>
     </FileUpload>
